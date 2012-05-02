@@ -4,13 +4,11 @@
 
 namespace asio = boost::asio;
 
-static const long timeout_us = 100*1000; //100ms
-
-static inline bool wait_for_recv_ready(int sock_fd){
+static inline bool wait_for_recv_ready(int sock_fd, const size_t timeout_ms){
     //setup timeval for timeout
     timeval tv;
     tv.tv_sec = 0;
-    tv.tv_usec = timeout_us;
+    tv.tv_usec = timeout_ms*1000;
 
     //setup rset for timeout
     fd_set rset;
@@ -43,11 +41,13 @@ public:
         delete _socket;
     }
 
-    const void *get_buff(size_t &len)
+    const void *get_buff(const size_t timeout_ms, size_t &len)
     {
-        len = 0; //reset
-        if (wait_for_recv_ready(_socket->native()))
-            len = ::recv(_socket->native(), &_buff[0], _buff.size(), 0);
+        if (!wait_for_recv_ready(_socket->native(), timeout_ms))
+        {
+            return NULL;
+        }
+        len = ::recv(_socket->native(), &_buff[0], _buff.size(), 0);
         return &_buff[0];
     }
 
@@ -86,7 +86,7 @@ public:
         delete _socket;
     }
 
-    void *get_buff(void)
+    void *get_buff(const size_t)
     {
         return &_buff[0];
     }

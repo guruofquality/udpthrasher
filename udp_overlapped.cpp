@@ -33,7 +33,8 @@ struct wsa_control{
 class UDPReceiverOverlapped : public UDPReceiver{
 public:
 
-    UDPReceiverOverlapped(const std::string &addr, const std::string &port, const size_t mtu)
+    UDPReceiverOverlapped(const std::string &addr, const std::string &port, const size_t mtu):
+        _index(0)
     {
         static wsa_control wsa; //makes wsa start happen via lazy initialization
 
@@ -56,26 +57,68 @@ public:
             closesocket(_sock_fd);
             throw std::runtime_error(str(boost::format("bind() failed with error %d") % error));
         }
+
+        //init buffers
+        _xfers.resize(num_recv_frames);
+        for (size_t i = 0; i < _xfers.size(); i++)
+        {
+            xfer_struct &xfer = _xfers[i];
+            xfer.mem.resize(mtu);
+            xfer.buf.buf = &xfer.mem[0];
+            xfer.buf.len = xfer.mem.size();
+            ZeroMemory(&xfer.overlapped, sizeof(xfer.overlapped));
+            xfer.overlapped.hEvent = WSACreateEvent();
+            if (xfer.overlapped.hEvent == WSA_INVALID_EVENT){
+                throw std::runtime_error("xfer.overlapped.hEvent == WSA_INVALID_EVENT");
+            }
+            this->release();
+        }
+
     }
 
     ~UDPReceiverOverlapped(void)
     {
+        for (size_t i = 0; i < _xfers.size(); i++)
+        {
+            WSACloseEvent(_xfers[i].overlapped.hEvent);
+        }
         closesocket(_sock_fd);
     }
 
-    const void *get_buff(size_t &len)
+    const void *get_buff(const size_t timeout_ms, size_t &len)
     {
-        
+        xfer_struct &xfer = _xfers[_index];
+
+        const DWORD result = WSAWaitForMultipleEvents(1, &xfer.overlapped.hEvent, true, timeout_ms, true);
+        if (result == WSA_WAIT_TIMEOUT) return NULL;
+
+        DWORD flags = 0;
+        WSAGetOverlappedResult(_sock_fd, &xfer.overlapped, &xfer.bytes, true, &flags);
+        WSAResetEvent(xfer.overlapped.hEvent);
+
+        len = xfer.bytes;
+        return xfer.buf.buf;
     }
 
     void release(void)
     {
-        
+        xfer_struct &xfer = _xfers[_index];
+        DWORD flags = 0;
+        WSARecv(_sock_fd, &xfer.buf, 1, &xfer.bytes, &flags, &xfer.overlapped, NULL);
+
+        if (++_index == _xfers.size()) _index = 0;
     }
 
 private:
     int _sock_fd;
-    std::vector<WSAOVERLAPPED> _overlapped;
+    struct xfer_struct{
+        WSAOVERLAPPED overlapped;
+        WSABUF buf;
+        DWORD bytes;
+        std::vector<char> mem;
+    };
+    std::vector<xfer_struct> _xfers;
+    size_t _index;
 };
 
 /***********************************************************************
@@ -106,25 +149,65 @@ public:
             closesocket(_sock_fd);
             throw std::runtime_error(str(boost::format("WSAConnect() failed with error %d") % error));
         }
+
+        //init buffers
+        _xfers.resize(num_recv_frames);
+        for (size_t i = 0; i < _xfers.size(); i++)
+        {
+            xfer_struct &xfer = _xfers[i];
+            xfer.mem.resize(mtu);
+            xfer.buf.buf = &xfer.mem[0];
+            xfer.buf.len = xfer.mem.size();
+            ZeroMemory(&xfer.overlapped, sizeof(xfer.overlapped));
+            xfer.overlapped.hEvent = WSACreateEvent();
+            if (xfer.overlapped.hEvent == WSA_INVALID_EVENT){
+                throw std::runtime_error("xfer.overlapped.hEvent == WSA_INVALID_EVENT");
+            }
+            WSASetEvent(xfer.overlapped.hEvent); //makes buffer available via get
+        }
+
     }
 
     ~UDPSenderOverlapped(void)
     {
+        for (size_t i = 0; i < _xfers.size(); i++)
+        {
+            WSACloseEvent(_xfers[i].overlapped.hEvent);
+        }
         closesocket(_sock_fd);
     }
 
-    void *get_buff(void)
+    void *get_buff(const size_t timeout_ms)
     {
-        
+        xfer_struct &xfer = _xfers[_index];
+
+        const DWORD result = WSAWaitForMultipleEvents(1, &xfer.overlapped.hEvent, true, timeout_ms, true);
+        if (result == WSA_WAIT_TIMEOUT) return NULL;
+
+        WSAResetEvent(xfer.overlapped.hEvent);
+        return xfer.buf.buf;
     }
 
     void release(const size_t len)
     {
-        
+        xfer_struct &xfer = _xfers[_index];
+
+        xfer.buf.len = len;
+        WSASend(_sock_fd, &xfer.buf, 1, NULL, 0, &xfer.overlapped, NULL);
+
+        if (++_index == _xfers.size()) _index = 0;
     }
 
 private:
     int _sock_fd;
+    struct xfer_struct{
+        WSAOVERLAPPED overlapped;
+        WSABUF buf;
+        DWORD bytes;
+        std::vector<char> mem;
+    };
+    std::vector<xfer_struct> _xfers;
+    size_t _index;
 };
 
 /***********************************************************************

@@ -10,7 +10,7 @@ struct UDPReceiver{
 
     static UDPReceiver *make_berkeley(const std::string &addr, const std::string &port, const size_t mtu);
 
-    virtual const void *get_buff(size_t &len) = 0;
+    virtual const void *get_buff(const size_t timeout_ms, size_t &len) = 0;
 
     virtual void release(void) = 0;
 
@@ -22,7 +22,7 @@ struct UDPSender{
 
     static UDPSender *make_berkeley(const std::string &addr, const std::string &port, const size_t mtu);
 
-    virtual void *get_buff(void) = 0;
+    virtual void *get_buff(const size_t timeout_ms) = 0;
 
     virtual void release(const size_t len) = 0;
 
