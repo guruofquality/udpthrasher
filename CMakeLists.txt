@@ -56,7 +56,7 @@ if(UNIX AND EXISTS "/usr/lib64")
     list(APPEND BOOST_LIBRARYDIR "/usr/lib64") #fedora 64-bit fix
 endif(UNIX AND EXISTS "/usr/lib64")
 
-set(BOOST_REQUIRED_COMPONENTS thread system)
+set(BOOST_REQUIRED_COMPONENTS thread system serialization)
 
 IF(MSVC)
     SET(BOOST_ALL_DYN_LINK "${BOOST_ALL_DYN_LINK}" CACHE BOOL "boost enable dynamic linking")
@@ -89,13 +89,14 @@ list(APPEND thrasherlibs ${Boost_LIBRARIES})
 ########################################################################
 # other things
 ########################################################################
-if(UNIX)
+IF(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     list(APPEND thrasherlibs pthread)
+    list(APPEND thrasherlibs rt)
 endif()
 
 ########################################################################
 # build the app
 ########################################################################
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-add_executable(udpthrasher udpthrasher.cpp udp_overlapped.cpp udp_berkeley.cpp)
+add_executable(udpthrasher udpthrasher.cpp udp_overlapped.cpp udp_berkeley.cpp task_runner.cpp)
 target_link_libraries(udpthrasher ${thrasherlibs})

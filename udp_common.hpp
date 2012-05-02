@@ -3,6 +3,8 @@
 
 #include <string>
 #include <cstdlib>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
 
 struct UDPSockConfig
 {
@@ -11,6 +13,18 @@ struct UDPSockConfig
     size_t frame_size;
     size_t num_frames;
     int sock_buff_size;
+
+    friend class boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int)
+    {
+        ar & addr;
+        ar & port;
+        ar & frame_size;
+        ar & num_frames;
+        ar & sock_buff_size;
+    }
+
 };
 
 struct UDPReceiver
