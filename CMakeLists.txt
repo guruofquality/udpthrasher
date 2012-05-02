@@ -98,5 +98,5 @@ endif()
 # build the app
 ########################################################################
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-add_executable(udpthrasher udpthrasher.cpp udp_overlapped.cpp udp_berkeley.cpp task_runner.cpp)
+add_executable(udpthrasher udpthrasher.cpp udp_overlapped.cpp udp_berkeley.cpp task_runner.cpp thrash_server.cpp)
 target_link_libraries(udpthrasher ${thrasherlibs})
