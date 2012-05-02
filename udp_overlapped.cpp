@@ -1,6 +1,7 @@
 #include "udp_common.hpp"
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
+#include <boost/make_shared.hpp>
 #include <stdexcept>
 #include <vector>
 
@@ -221,24 +222,24 @@ private:
 /***********************************************************************
  * Factory functions
  **********************************************************************/
-UDPReceiver *UDPReceiver::make_overlapped(const UDPSockConfig &config)
+boost::shared_ptr<UDPReceiver> UDPReceiver::make_overlapped(const UDPSockConfig &config)
 {
-    return new UDPReceiverOverlapped(config);
+    return boost::make_shared<UDPReceiverOverlapped>(config);
 }
 
-UDPSender *UDPSender::make_overlapped(const UDPSockConfig &config)
+boost::shared_ptr<UDPSender> UDPSender::make_overlapped(const UDPSockConfig &config)
 {
-    return new UDPSenderOverlapped(config);
+    return boost::make_shared<UDPSenderOverlapped>(config);
 }
 
 #else
 
-UDPReceiver *UDPReceiver::make_overlapped(const UDPSockConfig &)
+boost::shared_ptr<UDPReceiver> UDPReceiver::make_overlapped(const UDPSockConfig &)
 {
     throw std::runtime_error("cannot make_overlapped, this is not windows");
 }
 
-UDPSender *UDPSender::make_overlapped(const UDPSockConfig &)
+boost::shared_ptr<UDPSender> UDPSender::make_overlapped(const UDPSockConfig &)
 {
     throw std::runtime_error("cannot make_overlapped, this is not windows");
 }

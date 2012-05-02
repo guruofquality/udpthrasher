@@ -1,6 +1,8 @@
 #include "udp_common.hpp"
 #include <boost/asio.hpp>
 #include <vector>
+#include <boost/make_shared.hpp>
+#include <iostream>
 
 namespace asio = boost::asio;
 
@@ -18,18 +20,13 @@ public:
         asio::ip::udp::resolver::query query(asio::ip::udp::v4(), config.addr, config.port);
         asio::ip::udp::endpoint endpoint = *resolver.resolve(query);
 
-        _socket = new asio::ip::udp::socket(_io_service, endpoint);
+        _socket = boost::shared_ptr<asio::ip::udp::socket>(new asio::ip::udp::socket(_io_service, endpoint));
 
-        if (config.sock_buff_size > 0) setsockopt(
-            _socket->native(), SOL_SOCKET, SO_RCVBUF,
-            (const char *)&config.sock_buff_size,
-            sizeof(config.sock_buff_size)
-        );
-    }
-
-    ~UDPReceiverBerkeley(void)
-    {
-        delete _socket;
+        if (config.sock_buff_size > 0)
+        {
+            asio::socket_base::receive_buffer_size option(config.sock_buff_size);
+            _socket->set_option(option);
+        }
     }
 
     const void *get_buff(const size_t timeout_ms, size_t &len)
@@ -49,7 +46,7 @@ public:
 
 private:
     asio::io_service _io_service;
-    asio::ip::udp::socket *_socket;
+    boost::shared_ptr<asio::ip::udp::socket> _socket;
     std::vector<char> _buff;
 };
 
@@ -67,21 +64,16 @@ public:
         asio::ip::udp::resolver::query query(asio::ip::udp::v4(), config.addr, config.port);
         asio::ip::udp::endpoint endpoint = *resolver.resolve(query);
 
-        _socket = new asio::ip::udp::socket(_io_service);
+        _socket = boost::shared_ptr<asio::ip::udp::socket>(new asio::ip::udp::socket(_io_service));
         _socket->open(asio::ip::udp::v4());
         _socket->connect(endpoint);
 
-        if (config.sock_buff_size > 0) setsockopt(
-            _socket->native(), SOL_SOCKET, SO_SNDBUF,
-            (const char *)&config.sock_buff_size,
-            sizeof(config.sock_buff_size)
-        );
+        if (config.sock_buff_size > 0)
+        {
+            asio::socket_base::send_buffer_size option(config.sock_buff_size);
+            _socket->set_option(option);
+        }
 
-    }
-
-    ~UDPSenderBerkeley(void)
-    {
-        delete _socket;
     }
 
     void *get_buff(const size_t)
@@ -96,19 +88,19 @@ public:
 
 private:
     asio::io_service _io_service;
-    asio::ip::udp::socket *_socket;
+    boost::shared_ptr<asio::ip::udp::socket> _socket;
     std::vector<char> _buff;
 };
 
 /***********************************************************************
  * Factory functions
  **********************************************************************/
-UDPReceiver *UDPReceiver::make_berkeley(const UDPSockConfig &config)
+boost::shared_ptr<UDPReceiver> UDPReceiver::make_berkeley(const UDPSockConfig &config)
 {
-    return new UDPReceiverBerkeley(config);
+    return boost::make_shared<UDPReceiverBerkeley>(config);
 }
 
-UDPSender *UDPSender::make_berkeley(const UDPSockConfig &config)
+boost::shared_ptr<UDPSender> UDPSender::make_berkeley(const UDPSockConfig &config)
 {
-    return new UDPSenderBerkeley(config);
+    return boost::make_shared<UDPSenderBerkeley>(config);
 }

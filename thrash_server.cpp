@@ -17,35 +17,40 @@ void sig_int_handler(int){stop_signal_called = true;}
 /***********************************************************************
  * server handler
  **********************************************************************/
-void handle(asio::ip::tcp::socket *socket)
+void handle(boost::shared_ptr<asio::ip::tcp::socket> socket)
 {
     std::cout << "started a new handler thread" << std::endl;
     while (!stop_signal_called)
     {
         if (!wait_for_recv_ready(socket->native(), 100)) continue;
-        TaskRequest req;
+        try
         {
-            char buff[2048];
-            boost::system::error_code error;
-            const size_t len = socket->read_some(asio::buffer(buff, sizeof(buff)), error);
-            if (error == boost::asio::error::eof) break;
-            std::stringstream ss;
-            ss << std::string(buff, len);
-            boost::archive::text_iarchive ia(ss);
-            ia >> req;
+            TaskRequest req = TaskRequest();
+            {
+                char buff[2048];
+                const size_t len = socket->receive(asio::buffer(buff, sizeof(buff)));
+                std::stringstream ss;
+                ss << std::string(buff, len);
+                boost::archive::text_iarchive ia(ss);
+                ia >> req;
+            }
+            std::cout << "before the run... " << std::endl;
+            TaskResult res = run_the_dang_thing(req);
+            std::cout << "after the run... " << std::endl;
+            {
+                std::stringstream ss;
+                boost::archive::text_oarchive oa(ss);
+                oa << res;
+                std::string out = ss.str();
+                socket->send(asio::buffer(out));
+            }
         }
-        std::cout << "before the run... " << std::endl;
-        TaskResult res = run_the_dang_thing(req);
-        std::cout << "after the run... " << std::endl;
+        catch(...)
         {
-            std::stringstream ss;
-            boost::archive::text_oarchive oa(ss);
-            oa << res;
-            std::string out = ss.str();
-            socket->send(asio::buffer(out));
+            break;
         }
     }
-    delete socket;
+    std::cout << "done with this server handler!" << std::endl;
 }
 
 /***********************************************************************
@@ -61,14 +66,14 @@ void thrash_server(const std::string &addr, const std::string &port)
     asio::ip::tcp::resolver::query query(asio::ip::tcp::v4(), addr, port);
     asio::ip::tcp::endpoint endpoint = *resolver.resolve(query);
 
-    asio::ip::tcp::acceptor *acceptor = new asio::ip::tcp::acceptor(io_service, endpoint);
+    boost::shared_ptr<asio::ip::tcp::acceptor> acceptor(new asio::ip::tcp::acceptor(io_service, endpoint));
 
     boost::thread_group thread_group;
 
     while (!stop_signal_called)
     {
         if (!wait_for_recv_ready(acceptor->native(), 100)) continue;
-        asio::ip::tcp::socket *socket = new asio::ip::tcp::socket(io_service);
+        boost::shared_ptr<asio::ip::tcp::socket> socket(new asio::ip::tcp::socket(io_service));
         acceptor->accept(*socket);
 
         thread_group.create_thread(boost::bind(&handle, socket));
@@ -76,7 +81,6 @@ void thrash_server(const std::string &addr, const std::string &port)
 
     std::cout << "cleanup server runner..." << std::endl;
 
-    delete acceptor;
     thread_group.interrupt_all();
     thread_group.join_all();
 

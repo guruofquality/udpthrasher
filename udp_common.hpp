@@ -6,6 +6,7 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/asio.hpp> //select
+#include <boost/shared_ptr.hpp>
 
 static inline bool wait_for_recv_ready(int sock_fd, const size_t timeout_ms)
 {
@@ -47,9 +48,9 @@ struct UDPSockConfig
 struct UDPReceiver
 {
 
-    static UDPReceiver *make_overlapped(const UDPSockConfig &config);
+    static boost::shared_ptr<UDPReceiver> make_overlapped(const UDPSockConfig &config);
 
-    static UDPReceiver *make_berkeley(const UDPSockConfig &config);
+    static boost::shared_ptr<UDPReceiver> make_berkeley(const UDPSockConfig &config);
 
     virtual const void *get_buff(const size_t timeout_ms, size_t &len) = 0;
 
@@ -60,9 +61,9 @@ struct UDPReceiver
 struct UDPSender
 {
 
-    static UDPSender *make_overlapped(const UDPSockConfig &config);
+    static boost::shared_ptr<UDPSender> make_overlapped(const UDPSockConfig &config);
 
-    static UDPSender *make_berkeley(const UDPSockConfig &config);
+    static boost::shared_ptr<UDPSender> make_berkeley(const UDPSockConfig &config);
 
     virtual void *get_buff(const size_t timeout_ms) = 0;
 

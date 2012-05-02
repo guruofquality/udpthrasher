@@ -94,9 +94,18 @@ IF(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     list(APPEND thrasherlibs rt)
 endif()
 
+list(APPEND thrash_sources
+    udpthrasher.cpp
+    udp_overlapped.cpp
+    udp_berkeley.cpp
+    task_runner.cpp
+    thrash_server.cpp
+    thrash_client.cpp
+)
+
 ########################################################################
 # build the app
 ########################################################################
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-add_executable(udpthrasher udpthrasher.cpp udp_overlapped.cpp udp_berkeley.cpp task_runner.cpp thrash_server.cpp)
+add_executable(udpthrasher ${thrash_sources})
 target_link_libraries(udpthrasher ${thrasherlibs})
