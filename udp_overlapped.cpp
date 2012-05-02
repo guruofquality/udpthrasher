@@ -129,7 +129,8 @@ private:
  **********************************************************************/
 class UDPSenderOverlapped : public UDPSender{
 public:
-    UDPSenderOverlapped(const UDPSockConfig &config)
+    UDPSenderOverlapped(const UDPSockConfig &config):
+        _index(0)
     {
         static wsa_control wsa; //makes wsa start happen via lazy initialization
 

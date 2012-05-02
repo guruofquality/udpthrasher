@@ -57,7 +57,7 @@ static void do_tests(thrash_client &tasker, const size_t num_bytes, const double
     }
 
     std::vector<size_t> rx_num_frameses = boost::assign::list_of
-        (4)(16)(32)(128)(512)(2048);
+        (4)(16)(32)(128)(512)(1024);
     std::cout << "######################################################" << std::endl;
     std::cout << "## testing Overlapped sockets (client RX)... " << std::endl;
     std::cout << "######################################################" << std::endl;
