@@ -22,9 +22,9 @@ void handle(boost::shared_ptr<asio::ip::tcp::socket> socket)
     std::cout << "started a new handler thread" << std::endl;
     while (!stop_signal_called)
     {
-        if (!wait_for_recv_ready(socket->native(), 100)) continue;
         try
         {
+            if (!wait_for_recv_ready(socket->native(), 100)) continue;
             TaskRequest req = TaskRequest();
             {
                 char buff[2048];

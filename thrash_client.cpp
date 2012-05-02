@@ -1,16 +1,19 @@
 #include "thrash_client.hpp"
+#include "task_runner.hpp"
 #include <boost/asio.hpp>
-#include <boost/thread.hpp>
+#include <boost/make_shared.hpp>
 #include <iostream>
 
 namespace asio = boost::asio;
 
-void print_res(TaskResult &res)
+void print_res(const TaskResult &res)
 {
-    std::cout << "res.msg " << res.msg << std::endl;
-    std::cout << "res.duration " << res.duration << std::endl;
-    std::cout << "res.num_bytes " << res.num_bytes << std::endl;
-    std::cout << "rate " << (res.num_bytes/res.duration/1e6) << " MBps" << std::endl;
+    if (!res.success)
+    {
+        std::cout << std::endl << "!!!Failure: " << res.msg << std::endl;
+        return;
+    }
+    std::cout << (res.num_bytes/res.duration/1e6) << " MBps" << std::flush;
 }
 
 class thrash_client_impl : public thrash_client
@@ -37,28 +40,68 @@ public:
         delete socket;
     }
 
-    void dispatch_task(TaskRequest &req)
+    void dispatch_rx_task(const TestGoblin &client, const TestGoblin &server, const size_t num_bytes, const double duration)
     {
         TaskResult res_server = TaskResult();
         TaskResult res_client = TaskResult();
+        TaskRequest req_server = TaskRequest();
+        TaskRequest req_client = TaskRequest();
 
-        //setup client side task
-        TaskRequest req_server = req;
-        TaskRequest req_client = req;
-        if (req.direction == "send") req_client.direction = "recv";
-        if (req.direction == "recv") req_client.direction = "send";
+        req_client.which_impl = client.which_impl;
+        req_client.direction = "recv";
+        req_client.num_bytes = num_bytes;
+        req_client.duration = duration;
+        req_client.config.addr = local_addr;
+        req_client.config.port = "45678";
+        req_client.config.num_frames = client.num_frames;
+        req_client.config.frame_size = client.frame_size;
+        req_client.config.sock_buff_size = client.sock_buff_size;
 
-        if (req_server.direction == "recv") req_server.config.addr = remote_addr;
-        if (req_server.direction == "send") req_server.config.addr = local_addr;
+        req_server.which_impl = server.which_impl;
+        req_server.direction = "send";
+        req_server.num_bytes = num_bytes;
+        req_server.duration = duration;
+        req_server.config.addr = local_addr;
+        req_server.config.port = "45678";
+        req_server.config.num_frames = server.num_frames;
+        req_server.config.frame_size = server.frame_size;
+        req_server.config.sock_buff_size = server.sock_buff_size;
 
-        if (req_client.direction == "recv") req_client.config.addr = local_addr;
-        if (req_client.direction == "send") req_client.config.addr = remote_addr;
+        dispatch_task(req_client, req_server, res_client, res_server);
+    }
 
-        if (req_server.direction == "recv") req_server.config.sock_buff_size = 50e6;
-        if (req_client.direction == "recv") req_client.config.sock_buff_size = 50e6;
-        if (req_server.direction == "send") req_server.config.sock_buff_size = 1e6;
-        if (req_client.direction == "send") req_client.config.sock_buff_size = 1e6;
+    void dispatch_tx_task(const TestGoblin &client, const TestGoblin &server, const size_t num_bytes, const double duration)
+    {
+        TaskResult res_server = TaskResult();
+        TaskResult res_client = TaskResult();
+        TaskRequest req_server = TaskRequest();
+        TaskRequest req_client = TaskRequest();
 
+        req_client.which_impl = client.which_impl;
+        req_client.direction = "send";
+        req_client.num_bytes = num_bytes;
+        req_client.duration = duration;
+        req_client.config.addr = remote_addr;
+        req_client.config.port = "45678";
+        req_client.config.num_frames = client.num_frames;
+        req_client.config.frame_size = client.frame_size;
+        req_client.config.sock_buff_size = client.sock_buff_size;
+
+        req_server.which_impl = server.which_impl;
+        req_server.direction = "recv";
+        req_server.num_bytes = num_bytes;
+        req_server.duration = duration;
+        req_server.config.addr = remote_addr;
+        req_server.config.port = "45678";
+        req_server.config.num_frames = server.num_frames;
+        req_server.config.frame_size = server.frame_size;
+        req_server.config.sock_buff_size = server.sock_buff_size;
+
+        dispatch_task(req_client, req_server, res_client, res_server);
+    }
+
+    void dispatch_task(const TaskRequest &req_client, const TaskRequest &req_server, TaskResult &res_client, TaskResult &res_server)
+    {
         //tell server to do it
         {
             std::stringstream ss;
@@ -80,10 +123,14 @@ public:
             ia >> res_server;
         }
 
-        std::cout << "Client result:" << std::endl;
+        std::cout << "    * ";
+        std::cout << "Client: " << std::flush;
         print_res(res_client);
-        std::cout << "Server result:" << std::endl;
+        std::cout << std::endl;
+        std::cout << "    * ";
+        std::cout << "Server: " << std::flush;
         print_res(res_server);
+        std::cout << std::endl;
 
     }
 
@@ -93,7 +140,7 @@ private:
     std::string local_addr, remote_addr;
 };
 
-thrash_client *thrash_client::make(const std::string &addr, const std::string &port)
+boost::shared_ptr<thrash_client> thrash_client::make(const std::string &addr, const std::string &port)
 {
-    return new thrash_client_impl(addr, port);
+    return boost::make_shared<thrash_client_impl>(addr, port);
 }

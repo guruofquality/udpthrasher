@@ -21,7 +21,6 @@ static TaskResult run_the_dang_thing_recv(const TaskRequest &req)
     }
 
     boost::this_thread::sleep(boost::posix_time::milliseconds(500));
-    std::cout << "task about to RX..." << std::endl;
     const high_res_timer_type start_time = high_res_timer_now();
     const high_res_timer_type exit_time = start_time + high_res_timer_type(high_res_timer_tps()*req.duration);
 
@@ -77,7 +76,6 @@ static TaskResult run_the_dang_thing_send(const TaskRequest &req)
     }
 
     boost::this_thread::sleep(boost::posix_time::milliseconds(500));
-    std::cout << "task about to TX..." << std::endl;
     const high_res_timer_type start_time = high_res_timer_now();
     const high_res_timer_type exit_time = start_time + high_res_timer_type(high_res_timer_tps()*req.duration);
 
@@ -117,8 +115,17 @@ static TaskResult run_the_dang_thing_send(const TaskRequest &req)
     return res;
 }
 
-TaskResult run_the_dang_thing(const TaskRequest &req)
+TaskResult run_the_dang_thing(const TaskRequest &req_)
 {
+    TaskRequest req = req_;
+
+    if (req.which_impl == "best") req.which_impl = "overlapped";
+
+    //we know overlapped will fail, so use other impl
+    #ifndef _MSC_VER
+    req.which_impl = "berkeley";
+    #endif
+
     try
     {
         if (req.direction == "recv") return run_the_dang_thing_recv(req);
