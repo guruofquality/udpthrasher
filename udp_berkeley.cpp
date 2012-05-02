@@ -4,21 +4,6 @@
 
 namespace asio = boost::asio;
 
-static inline bool wait_for_recv_ready(int sock_fd, const size_t timeout_ms){
-    //setup timeval for timeout
-    timeval tv;
-    tv.tv_sec = 0;
-    tv.tv_usec = timeout_ms*1000;
-
-    //setup rset for timeout
-    fd_set rset;
-    FD_ZERO(&rset);
-    FD_SET(sock_fd, &rset);
-
-    //call select with timeout on receive socket
-    return ::select(sock_fd+1, &rset, NULL, NULL, &tv) > 0;
-}
-
 /***********************************************************************
  * Berkeley Receive Implementation
  **********************************************************************/

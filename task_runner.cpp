@@ -1,10 +1,11 @@
 #include "task_runner.hpp"
 #include "udp_common.hpp"
 #include "high_res_timer.h"
+#include <iostream>
 
 using namespace gruel;
 
-static TaskResult run_the_dang_thing_send(const TaskRequest &req)
+static TaskResult run_the_dang_thing_recv(const TaskRequest &req)
 {
     UDPReceiver *recver = NULL;
     if (req.which_impl == "overlapped") recver = UDPReceiver::make_overlapped(req.config);
@@ -59,7 +60,7 @@ static TaskResult run_the_dang_thing_send(const TaskRequest &req)
     return res;
 }
 
-static TaskResult run_the_dang_thing_recv(const TaskRequest &req)
+static TaskResult run_the_dang_thing_send(const TaskRequest &req)
 {
 
     UDPSender *sender = NULL;

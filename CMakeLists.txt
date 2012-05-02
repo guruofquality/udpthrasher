@@ -56,7 +56,7 @@ if(UNIX AND EXISTS "/usr/lib64")
     list(APPEND BOOST_LIBRARYDIR "/usr/lib64") #fedora 64-bit fix
 endif(UNIX AND EXISTS "/usr/lib64")
 
-set(BOOST_REQUIRED_COMPONENTS thread system serialization)
+set(BOOST_REQUIRED_COMPONENTS thread system serialization program_options)
 
 IF(MSVC)
     SET(BOOST_ALL_DYN_LINK "${BOOST_ALL_DYN_LINK}" CACHE BOOL "boost enable dynamic linking")
