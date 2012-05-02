@@ -25,15 +25,21 @@ static inline bool wait_for_recv_ready(int sock_fd, const size_t timeout_ms){
 class UDPReceiverBerkeley : public UDPReceiver{
 public:
 
-    UDPReceiverBerkeley(const std::string &addr, const std::string &port, const size_t mtu)
+    UDPReceiverBerkeley(const UDPSockConfig &config)
     {
-        _buff.resize(mtu);
+        _buff.resize(config.frame_size);
 
         asio::ip::udp::resolver resolver(_io_service);
-        asio::ip::udp::resolver::query query(asio::ip::udp::v4(), addr, port);
+        asio::ip::udp::resolver::query query(asio::ip::udp::v4(), config.addr, config.port);
         asio::ip::udp::endpoint endpoint = *resolver.resolve(query);
 
         _socket = new asio::ip::udp::socket(_io_service, endpoint);
+
+        if (config.sock_buff_size > 0) setsockopt(
+            _socket->native(), SOL_SOCKET, SO_RCVBUF,
+            (const char *)&config.sock_buff_size,
+            sizeof(config.sock_buff_size)
+        );
     }
 
     ~UDPReceiverBerkeley(void)
@@ -68,17 +74,24 @@ private:
 class UDPSenderBerkeley : public UDPSender{
 public:
 
-    UDPSenderBerkeley(const std::string &addr, const std::string &port, const size_t mtu)
+    UDPSenderBerkeley(const UDPSockConfig &config)
     {
-        _buff.resize(mtu);
+        _buff.resize(config.frame_size);
 
         asio::ip::udp::resolver resolver(_io_service);
-        asio::ip::udp::resolver::query query(asio::ip::udp::v4(), addr, port);
+        asio::ip::udp::resolver::query query(asio::ip::udp::v4(), config.addr, config.port);
         asio::ip::udp::endpoint endpoint = *resolver.resolve(query);
 
         _socket = new asio::ip::udp::socket(_io_service);
         _socket->open(asio::ip::udp::v4());
         _socket->connect(endpoint);
+
+        if (config.sock_buff_size > 0) setsockopt(
+            _socket->native(), SOL_SOCKET, SO_SNDBUF,
+            (const char *)&config.sock_buff_size,
+            sizeof(config.sock_buff_size)
+        );
+
     }
 
     ~UDPSenderBerkeley(void)
@@ -105,12 +118,12 @@ private:
 /***********************************************************************
  * Factory functions
  **********************************************************************/
-UDPReceiver *UDPReceiver::make_berkeley(const std::string &addr, const std::string &port, const size_t mtu)
+UDPReceiver *UDPReceiver::make_berkeley(const UDPSockConfig &config)
 {
-    return new UDPReceiverBerkeley(addr, port, mtu);
+    return new UDPReceiverBerkeley(config);
 }
 
-UDPSender *UDPSender::make_berkeley(const std::string &addr, const std::string &port, const size_t mtu)
+UDPSender *UDPSender::make_berkeley(const UDPSockConfig &config)
 {
-    return new UDPSenderBerkeley(addr, port, mtu);
+    return new UDPSenderBerkeley(config);
 }

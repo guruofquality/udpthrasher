@@ -4,11 +4,21 @@
 #include <string>
 #include <cstdlib>
 
-struct UDPReceiver{
+struct UDPSockConfig
+{
+    std::string addr;
+    std::string port;
+    size_t frame_size;
+    size_t num_frames;
+    int sock_buff_size;
+};
 
-    static UDPReceiver *make_overlapped(const std::string &addr, const std::string &port, const size_t mtu);
+struct UDPReceiver
+{
 
-    static UDPReceiver *make_berkeley(const std::string &addr, const std::string &port, const size_t mtu);
+    static UDPReceiver *make_overlapped(const UDPSockConfig &config);
+
+    static UDPReceiver *make_berkeley(const UDPSockConfig &config);
 
     virtual const void *get_buff(const size_t timeout_ms, size_t &len) = 0;
 
@@ -16,11 +26,12 @@ struct UDPReceiver{
 
 };
 
-struct UDPSender{
+struct UDPSender
+{
 
-    static UDPSender *make_overlapped(const std::string &addr, const std::string &port, const size_t mtu);
+    static UDPSender *make_overlapped(const UDPSockConfig &config);
 
-    static UDPSender *make_berkeley(const std::string &addr, const std::string &port, const size_t mtu);
+    static UDPSender *make_berkeley(const UDPSockConfig &config);
 
     virtual void *get_buff(const size_t timeout_ms) = 0;
 

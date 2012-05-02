@@ -6,10 +6,6 @@
 
 namespace asio = boost::asio;
 
-//TODO param me...
-static const size_t num_recv_frames = 32;
-static const size_t num_send_frames = 32;
-
 #ifdef _MSC_VER
 
 /***********************************************************************
@@ -33,14 +29,14 @@ struct wsa_control{
 class UDPReceiverOverlapped : public UDPReceiver{
 public:
 
-    UDPReceiverOverlapped(const std::string &addr, const std::string &port, const size_t mtu):
+    UDPReceiverOverlapped(const UDPSockConfig &config):
         _index(0)
     {
         static wsa_control wsa; //makes wsa start happen via lazy initialization
 
         asio::io_service _io_service;
         asio::ip::udp::resolver resolver(_io_service);
-        asio::ip::udp::resolver::query query(asio::ip::udp::v4(), addr, port);
+        asio::ip::udp::resolver::query query(asio::ip::udp::v4(), config.addr, config.port);
         asio::ip::udp::endpoint endpoint = *resolver.resolve(query);
 
         //create the socket
@@ -49,6 +45,12 @@ public:
             const DWORD error = WSAGetLastError();
             throw std::runtime_error(str(boost::format("WSASocket() failed with error %d") % error));
         }
+
+        if (config.sock_buff_size > 0) setsockopt(
+            _sock_fd, SOL_SOCKET, SO_RCVBUF,
+            (const char *)&config.sock_buff_size,
+            sizeof(config.sock_buff_size)
+        );
 
         //bind the socket
         const asio::ip::udp::endpoint::data_type &servaddr = *endpoint.data();
@@ -59,11 +61,11 @@ public:
         }
 
         //init buffers
-        _xfers.resize(num_recv_frames);
+        _xfers.resize(config.num_frames);
         for (size_t i = 0; i < _xfers.size(); i++)
         {
             xfer_struct &xfer = _xfers[i];
-            xfer.mem.resize(mtu);
+            xfer.mem.resize(config.frame_size);
             xfer.buf.buf = &xfer.mem[0];
             xfer.buf.len = xfer.mem.size();
             ZeroMemory(&xfer.overlapped, sizeof(xfer.overlapped));
@@ -126,13 +128,13 @@ private:
  **********************************************************************/
 class UDPSenderOverlapped : public UDPSender{
 public:
-    UDPSenderOverlapped(const std::string &addr, const std::string &port, const size_t mtu)
+    UDPSenderOverlapped(const UDPSockConfig &config)
     {
         static wsa_control wsa; //makes wsa start happen via lazy initialization
 
         asio::io_service _io_service;
         asio::ip::udp::resolver resolver(_io_service);
-        asio::ip::udp::resolver::query query(asio::ip::udp::v4(), addr, port);
+        asio::ip::udp::resolver::query query(asio::ip::udp::v4(), config.addr, config.port);
         asio::ip::udp::endpoint endpoint = *resolver.resolve(query);
 
         //create the socket
@@ -141,6 +143,12 @@ public:
             const DWORD error = WSAGetLastError();
             throw std::runtime_error(str(boost::format("WSASocket() failed with error %d") % error));
         }
+
+        if (config.sock_buff_size > 0) setsockopt(
+            _sock_fd, SOL_SOCKET, SO_SNDBUF,
+            (const char *)&config.sock_buff_size,
+            sizeof(config.sock_buff_size)
+        );
 
         //connect the socket so we can send/recv
         const asio::ip::udp::endpoint::data_type &servaddr = *endpoint.data();
@@ -151,11 +159,11 @@ public:
         }
 
         //init buffers
-        _xfers.resize(num_recv_frames);
+        _xfers.resize(config.num_frames);
         for (size_t i = 0; i < _xfers.size(); i++)
         {
             xfer_struct &xfer = _xfers[i];
-            xfer.mem.resize(mtu);
+            xfer.mem.resize(config.frame_size);
             xfer.buf.buf = &xfer.mem[0];
             xfer.buf.len = xfer.mem.size();
             ZeroMemory(&xfer.overlapped, sizeof(xfer.overlapped));
@@ -213,24 +221,24 @@ private:
 /***********************************************************************
  * Factory functions
  **********************************************************************/
-UDPReceiver *UDPReceiver::make_overlapped(const std::string &addr, const std::string &port, const size_t mtu)
+UDPReceiver *UDPReceiver::make_overlapped(const UDPSockConfig &config)
 {
-    return new UDPReceiverOverlapped(addr, port, mtu);
+    return new UDPReceiverOverlapped(config);
 }
 
-UDPSender *UDPSender::make_overlapped(const std::string &addr, const std::string &port, const size_t mtu)
+UDPSender *UDPSender::make_overlapped(const UDPSockConfig &config)
 {
-    return new UDPSenderOverlapped(addr, port, mtu);
+    return new UDPSenderOverlapped(config);
 }
 
 #else
 
-UDPReceiver *UDPReceiver::make_overlapped(const std::string &, const std::string &, const size_t)
+UDPReceiver *UDPReceiver::make_overlapped(const UDPSockConfig &)
 {
     throw std::runtime_error("cannot make_overlapped, this is not windows");
 }
 
-UDPSender *UDPSender::make_overlapped(const std::string &, const std::string &, const size_t)
+UDPSender *UDPSender::make_overlapped(const UDPSockConfig &)
 {
     throw std::runtime_error("cannot make_overlapped, this is not windows");
 }
