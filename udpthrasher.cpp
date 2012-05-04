@@ -15,7 +15,7 @@ namespace po = boost::program_options;
 static void do_tests(thrash_client &tasker, const size_t num_bytes, const double duration)
 {
     std::vector<size_t> rx_sock_buff_sizes = boost::assign::list_of
-        (0)(10e3)(10e6)(50e6)(100e6)(1e9);
+        (0)(10e3)(10e6)(50e6)(100e6);
     std::cout << "######################################################" << std::endl;
     std::cout << "## testing Berkley sockets (client RX)... " << std::endl;
     std::cout << "######################################################" << std::endl;
@@ -24,13 +24,9 @@ static void do_tests(thrash_client &tasker, const size_t num_bytes, const double
         TestGoblin client = TestGoblin();
         client.which_impl = "berkeley";
         client.sock_buff_size = rx_sock_buff_size;
-        client.frame_size = 1472;
-        client.num_frames = 1; //doesnt matter
         TestGoblin server = TestGoblin();
         server.which_impl = "best";
         server.sock_buff_size = 1e6;
-        server.frame_size = 1472;
-        server.num_frames = 1; //doesnt matter
         std::cout << boost::format("Client is RXing -- %d rx_sock_buff_size") % rx_sock_buff_size << std::endl;
         tasker.dispatch_rx_task(client, server, num_bytes, duration);
         std::cout << std::endl;
@@ -44,20 +40,15 @@ static void do_tests(thrash_client &tasker, const size_t num_bytes, const double
         TestGoblin client = TestGoblin();
         client.which_impl = "berkeley";
         client.sock_buff_size = 1e6;
-        client.frame_size = 1472;
-        client.num_frames = 1; //doesnt matter
         TestGoblin server = TestGoblin();
-        server.which_impl = "best";
         server.sock_buff_size = rx_sock_buff_size;
-        server.frame_size = 1472;
-        server.num_frames = 1; //doesnt matter
         std::cout << boost::format("Client is TXing -- %d rx_sock_buff_size") % rx_sock_buff_size << std::endl;
         tasker.dispatch_tx_task(client, server, num_bytes, duration);
         std::cout << std::endl;
     }
 
     std::vector<size_t> rx_num_frameses = boost::assign::list_of
-        (4)(16)(32)(64)(128)(256)(512);
+        (4)(16)(32)(64)(128)(256);
     std::cout << "######################################################" << std::endl;
     std::cout << "## testing Overlapped sockets (client RX)... " << std::endl;
     std::cout << "######################################################" << std::endl;
@@ -65,14 +56,8 @@ static void do_tests(thrash_client &tasker, const size_t num_bytes, const double
     {
         TestGoblin client = TestGoblin();
         client.which_impl = "overlapped";
-        client.sock_buff_size = 0;
-        client.frame_size = 1472;
         client.num_frames = rx_num_frames;
         TestGoblin server = TestGoblin();
-        server.which_impl = "best";
-        server.sock_buff_size = 0;
-        server.frame_size = 1472;
-        server.num_frames = 32;
         std::cout << boost::format("Client is RXing -- %d rx_num_frames") % rx_num_frames << std::endl;
         tasker.dispatch_rx_task(client, server, num_bytes, duration);
         std::cout << std::endl;
@@ -85,16 +70,46 @@ static void do_tests(thrash_client &tasker, const size_t num_bytes, const double
     {
         TestGoblin client = TestGoblin();
         client.which_impl = "overlapped";
-        client.sock_buff_size = 0;
-        client.frame_size = 1472;
-        client.num_frames = 32;
         TestGoblin server = TestGoblin();
-        server.which_impl = "best";
-        server.sock_buff_size = 0;
-        server.frame_size = 1472;
         server.num_frames = rx_num_frames;
         std::cout << boost::format("Client is TXing -- %d rx_num_frames") % rx_num_frames << std::endl;
         tasker.dispatch_tx_task(client, server, num_bytes, duration);
+        std::cout << std::endl;
+    }
+
+    std::vector<double> overheads = boost::assign::list_of
+        (4e-6)(8e-6)(12e-6)(16e-6);
+    std::cout << "######################################################" << std::endl;
+    std::cout << "## testing Overhead (Berkley sockets)... " << std::endl;
+    std::cout << "######################################################" << std::endl;
+    BOOST_FOREACH(const double overhead, overheads)
+    {
+        TestGoblin client = TestGoblin();
+        client.overhead = overhead;
+        client.which_impl = "berkeley";
+        TestGoblin server = TestGoblin();
+        std::cout << boost::format("Client is RXing -- %fus overhead") % (overhead*1e6) << std::endl;
+        tasker.dispatch_rx_task(client, server, num_bytes, duration);
+        std::cout << std::endl;
+        std::cout << boost::format("Client is TXing -- %fus overhead") % (overhead*1e6) << std::endl;
+        tasker.dispatch_rx_task(server, client, num_bytes, duration);
+        std::cout << std::endl;
+    }
+
+    std::cout << "######################################################" << std::endl;
+    std::cout << "## testing Overhead (Overlapped sockets)... " << std::endl;
+    std::cout << "######################################################" << std::endl;
+    BOOST_FOREACH(const double overhead, overheads)
+    {
+        TestGoblin client = TestGoblin();
+        client.overhead = overhead;
+        client.which_impl = "overlapped";
+        TestGoblin server = TestGoblin();
+        std::cout << boost::format("Client is RXing -- %fus overhead") % (overhead*1e6) << std::endl;
+        tasker.dispatch_rx_task(client, server, num_bytes, duration);
+        std::cout << std::endl;
+        std::cout << boost::format("Client is TXing -- %fus overhead") % (overhead*1e6) << std::endl;
+        tasker.dispatch_rx_task(server, client, num_bytes, duration);
         std::cout << std::endl;
     }
 }

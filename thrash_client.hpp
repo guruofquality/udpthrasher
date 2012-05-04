@@ -6,10 +6,19 @@
 
 struct TestGoblin
 {
+    TestGoblin(void)
+    {
+        which_impl = "best";
+        sock_buff_size = 0;
+        frame_size = 1472;
+        num_frames = 32;
+        overhead = 0.0;
+    }
     std::string which_impl;
     size_t sock_buff_size;
     size_t frame_size;
     size_t num_frames;
+    double overhead;
 };
 
 struct thrash_client

@@ -7,6 +7,12 @@
 
 using namespace gruel;
 
+static inline void high_res_sleep(const high_res_timer_type delta)
+{
+    const high_res_timer_type exit_time = high_res_timer_now() + delta;
+    while (high_res_timer_now() < exit_time){}
+}
+
 static TaskResult run_the_dang_thing_recv(const TaskRequest &req)
 {
     boost::shared_ptr<UDPReceiver> recver;
@@ -21,6 +27,7 @@ static TaskResult run_the_dang_thing_recv(const TaskRequest &req)
     }
 
     boost::this_thread::sleep(boost::posix_time::milliseconds(500));
+    const high_res_timer_type overhead_delta = high_res_timer_tps()*req.overhead;
     const high_res_timer_type start_time = high_res_timer_now();
     const high_res_timer_type exit_time = start_time + high_res_timer_type(high_res_timer_tps()*req.duration);
 
@@ -50,6 +57,8 @@ static TaskResult run_the_dang_thing_recv(const TaskRequest &req)
             break;
         }
 
+        high_res_sleep(overhead_delta);
+
     }
 
     const high_res_timer_type stop_time = high_res_timer_now();
@@ -77,6 +86,7 @@ static TaskResult run_the_dang_thing_send(const TaskRequest &req)
     }
 
     boost::this_thread::sleep(boost::posix_time::milliseconds(500));
+    const high_res_timer_type overhead_delta = high_res_timer_tps()*req.overhead;
     const high_res_timer_type start_time = high_res_timer_now();
     const high_res_timer_type exit_time = start_time + high_res_timer_type(high_res_timer_tps()*req.duration);
 
@@ -105,6 +115,8 @@ static TaskResult run_the_dang_thing_send(const TaskRequest &req)
         {
             break;
         }
+
+        high_res_sleep(overhead_delta);
     }
 
     const high_res_timer_type stop_time = high_res_timer_now();

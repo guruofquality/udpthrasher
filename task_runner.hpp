@@ -14,6 +14,7 @@ struct TaskRequest
     UDPSockConfig config;
     size_t num_bytes; //num bytes to run for or 0 for duration
     double duration; //duration in seconds or 0 for num bytes
+    double overhead; //simulate overhead with sleep in seconds
 
     friend class boost::serialization::access;
     template<class Archive>
@@ -24,6 +25,7 @@ struct TaskRequest
         ar & config;
         ar & num_bytes;
         ar & duration;
+        ar & overhead;
     }
 
 };

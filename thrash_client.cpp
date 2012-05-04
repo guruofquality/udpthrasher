@@ -51,6 +51,7 @@ public:
         req_client.direction = "recv";
         req_client.num_bytes = num_bytes;
         req_client.duration = duration;
+        req_client.overhead = client.overhead;
         req_client.config.addr = local_addr;
         req_client.config.port = "45678";
         req_client.config.num_frames = client.num_frames;
@@ -61,6 +62,7 @@ public:
         req_server.direction = "send";
         req_server.num_bytes = num_bytes;
         req_server.duration = duration;
+        req_server.overhead = server.overhead;
         req_server.config.addr = local_addr;
         req_server.config.port = "45678";
         req_server.config.num_frames = server.num_frames;
@@ -81,6 +83,7 @@ public:
         req_client.direction = "send";
         req_client.num_bytes = num_bytes;
         req_client.duration = duration;
+        req_client.overhead = client.overhead;
         req_client.config.addr = remote_addr;
         req_client.config.port = "45678";
         req_client.config.num_frames = client.num_frames;
@@ -91,6 +94,7 @@ public:
         req_server.direction = "recv";
         req_server.num_bytes = num_bytes;
         req_server.duration = duration;
+        req_server.overhead = server.overhead;
         req_server.config.addr = remote_addr;
         req_server.config.port = "45678";
         req_server.config.num_frames = server.num_frames;
