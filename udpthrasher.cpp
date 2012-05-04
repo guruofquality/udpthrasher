@@ -78,16 +78,18 @@ static void do_tests(thrash_client &tasker, const size_t num_bytes, const double
     }
 
     std::vector<double> overheads = boost::assign::list_of
-        (4e-6)(8e-6)(12e-6)(16e-6);
+        (2e-6)(4e-6)(8e-6)(12e-6)(16e-6);
     std::cout << "######################################################" << std::endl;
     std::cout << "## testing Overhead (Berkley sockets)... " << std::endl;
     std::cout << "######################################################" << std::endl;
     BOOST_FOREACH(const double overhead, overheads)
     {
         TestGoblin client = TestGoblin();
+        client.sock_buff_size = 50e6;
         client.overhead = overhead;
         client.which_impl = "berkeley";
         TestGoblin server = TestGoblin();
+        server.sock_buff_size = 1e6;
         std::cout << boost::format("Client is RXing -- %fus overhead") % (overhead*1e6) << std::endl;
         tasker.dispatch_rx_task(client, server, num_bytes, duration);
         std::cout << std::endl;
