@@ -31,6 +31,7 @@ static TaskResult run_the_dang_thing_recv(const TaskRequest &req)
         const void *p = recver->get_buff(100/*ms*/, len);
         if (p == NULL)
         {
+            if (num_bytes_total > 0) break;
             TaskResult res;
             res.success = false;
             res.msg = "timeout";
@@ -86,6 +87,7 @@ static TaskResult run_the_dang_thing_send(const TaskRequest &req)
         void *p = sender->get_buff(100/*ms*/);
         if (p == NULL)
         {
+            if (num_bytes_total > 0) break;
             TaskResult res;
             res.success = false;
             res.msg = "timeout";
